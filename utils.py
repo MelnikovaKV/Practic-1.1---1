@@ -17,11 +17,11 @@ def randcell2(x, y):
     dx,dy = moves[t][0], moves[t][1]
     return (x + dx, y + dy)
 
-           
-     
+
+
 
 def check_bounds2(self, x, y):
         if (x < 0 or y < 0 or x >= self.h or y >= self.w):
-             return True   
+             return True
         
         

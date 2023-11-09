@@ -1,11 +1,10 @@
-import random
 from utils import randbool
 from utils import randcell
 from utils import randcell2
 
 
 
-# 🟩🚁💦🔥🌫️🌿🌳💙🛒🏥🟫
+# 🟩🚁💦🔥🌫️🌿🌳💙🛒🏥🟫💧
 # 0 - поле
 # 1 - вертолет
 # 2 - река
@@ -21,38 +20,33 @@ from utils import randcell2
 # 14 - 
 # n - количество водоемов
 
-CELL_TYPES = "🟨🚁💦🔥🌫️🌿🌳💙🛒🏥🟫"
+CELL_TYPES = [('🟨'), ('🚁 '), ('💦 '), ('🔥 '), ('🌫️ '), ('🌿 '), ('🌳 '), ('💙 '), ('🛒 '), ('🏥 '), ('🟫')]
+
+BONUS_TREE = 100
+# FINE_TREE = 200
+UPGRADE_COST = 5000
+# TODO: поднять до 10000
+LIFE_COST = 1000
+
 
 class Map:
     def __init__(self, w, h):
         self.w = w
         self.h = h
         self.cells = [[0 for i in range(w)] for j in range (h)]
+        self.generate_forests(5,10)
+        self.generate_river(10)
+        self.generate_river(10)
+        self.generate_upgrade_shop()
+        self.generate_hospital()
+        
 
-    def Generate_river(self, l):
-        rc = randcell(self.w-2, self.h-2) # рандом исток
-        rx, ry = rc[0], rc[1] # координаты исток
-        self.cells[rx][ry] = 2 # отмечаем на карте исток реки
-        if l > 1:              # если длина > 1
-            while l > 1:       #пока длина больше 1
-                rc2 = randcell2(rx, ry) #ищем клетку рядом
-                rx2, ry2 = rc2[0], rc2[1] # нашли
-                if rx2 < 0 or ry2 < 0 or rx2 > self.w or ry2 > self.h: # проверяем на отсутствие клетки на карте
-                    rx2, ry2 = rx, ry # возвращаем предыдущие значения, если клетки на поле нет
-                    rx, ry = rx2, ry2 # базовая клетка = полученному результату
-                    l += 1 # длина +1, т.к 1 ход потерян впустую
-                else:
-                    self.cells[rx2][ry2] = 2 # закрашиваем, если клетка есть
-                    rx, ry = rx2, ry2 # базовая клетка = полученному результату
-                    l -= 1 # длина -1, т.к условие выполнено
-                                    
-    def Generate_forests(self, r, mxr):
-        for ri in range (self.h):
-            for ci in range (self.w):
-                if randbool(r, mxr):
-                    self.cells[ri][ci] = 5
-
-    def print_map(self):
+    def check_bounds(self, x, y):
+        if (x < 0 or y < 0 or x >= self.h or y >= self.w):
+            return False
+        return True
+    
+    def print_map(self, helico, clouds):
         a = 1
         b = 1
         print('X :', end = '')
@@ -63,81 +57,109 @@ class Map:
             else:
                 print(a,"", end='')
                 a += 1
-        print(a) 
-        print("🟫 "*(self.w + 2))
-        for row in self.cells:
+        print(a)
+        print("🟫 " * (self.w + 2))
+        for ri in range (self.h):
             print("🟫",end="")
-            for cell in row:
-                #if (cell >= 0 and cell <= len(CELL_TYPES)):
-                #    print(CELL_TYPES[cell],end="")
-                if cell == 0:
-                    print('🟨', end='')
-                elif cell == 1:
+            for ci in range (self.w):
+                cell  = self.cells[ri][ci]
+                if (clouds.cells[ri][ci] == 1):
+                    print('☁️  ', end='')
+                elif (clouds.cells[ri][ci] == 2):
+                    print('⚡ ', end='')
+                elif (helico.x == ri and helico.y == ci):
                     print('🚁 ', end='')
-                elif cell == 2:
-                    print('💦 ', end='')
-                elif cell == 3:
-                    print('🔥 ', end='')
-                elif cell == 4:
-                    print('🌫️ ', end='')
-                elif cell == 5:
-                    print('🌿 ', end='')
-                elif cell == 6:
-                    print('🌳 ', end='')
-                elif cell == 7:
-                    print('💙 ', end='')
-                elif cell == 8:
-                    print('🛒 ', end='')
-                elif cell == 9:
-                    print('🏥 ', end='')
-                elif cell == 10:
-                    print('🟫', end='')                       
+                elif (cell >= 0 and cell < len(CELL_TYPES)):
+                    print(CELL_TYPES[cell], end = "")
             print("🟫",end = '')
             print(b)
             b += 1
         print("🟫 " * (self.w + 2))
            
-    def check_bounds(self, x, y):
-        if (x < 0 or y < 0 or x >= self.h or y >= self.w):
-            print("данная позиция отсутствует в поле игры")
-        return True    
+    def generate_river(self, l):
+        rc = randcell((self.w-2), (self.h-2))
+        rx, ry = rc[0], rc[1]
+        self.cells[rx][ry] = 2
+        while l > 0:
+            rc2 = randcell2(rx, ry)
+            rx2, ry2 = rc2[0], rc2[1]
+            if (self.check_bounds(rx2, ry2)):
+                self.cells[rx2][ry2] = 2
+                rx, ry = rx2, ry2
+                l -= 1
 
-    def Generate_shop(self, rx, ry):
-        rc = randcell(self.w, self.h) 
-        rx, ry = rc[0], rc[1] 
-        self.cells[rx][ry] = 8
+    def generate_forests(self, r, mxr):
+        for ri in range (self.h):
+            for ci in range (self.w):
+                if randbool(r, mxr):
+                    self.cells[ri][ci] = 5
 
-    def Generate_apgrade(self, x, y):
-        rc = randcell(self.w, self.h) 
-        rx, ry = rc[0], rc[1] 
-        self.cells[rx][ry] = 9    
-    
-    def Add_fire(self):
+    # def generate_oldtree(self):
+    #     rc = randcell(self.w, self.h)
+    #     rx, ry = rc[0], rc[1]
+    #     if self.cells[rx][ry] == 5:
+    #         self.cells[rx][ry] = 6
+
+    def generate_upgrade_shop(self):
         c = randcell(self.w, self.h)
         cx, cy = c[0], c[1]
-        if self.cells[cx][cy] == 6:
+        self.cells[cx][cy] = 8
+
+    def generate_hospital(self):
+        rc = randcell(self.w, self.h)
+        rx, ry = rc[0], rc[1]
+        if self.cells[rx][ry] != 8:
+            self.cells[rx][ry] = 9
+        else:
+            self.generate_hospital()
+    
+    def add_fire(self):
+        c = randcell(self.w, self.h)
+        cx, cy = c[0], c[1]
+        if self.cells[cx][cy] == 5:
             self.cells[cx][cy] = 3
 
-    def Add_tree(self):
+    def add_tree(self):
         c = randcell(self.w, self.h)
         cx, cy = c[0], c[1]
         if self.cells[cx][cy] == 0:
            self.cells[cx][cy] = 5
 
-    def Generate_oldtree(self):
-        rc = randcell(self.w, self.h)
-        rx, ry = rc[0], rc[1]
-        if self.cells[rx][ry] == 5:
-            self.cells[rx][ry] = 6
-
-    def Apdate_fires(self):
-        for i in range (self.h):
-            for j in range (self.w):
-                cell = self.cells[i][j]
+    def update_fires(self):
+        for ri in range (self.h):
+            for ci in range (self.w):
+                cell = self.cells[ri][ci]
                 if cell  == 3:
-                    self.cells[i][j] = 0
-        for i in range (20):
-            self.Add_fire()            
+                    self.cells[ri][ci] = 0
+        for i in range (10):
+            self.add_fire()
+
+    def process_helicopter(self, helico, clouds):
+        c = self.cells[helico.x][helico.y]
+        d = clouds.cells[helico.x][helico.y]
+        if (c == 2):
+            helico.tank = helico.mxtank
+        if (c == 3 and helico.tank > 0):
+            helico.tank -= 1
+            helico.score += BONUS_TREE
+            self.cells[helico.x][helico.y] = 6
+        if (c == 8 and helico.mxtank != 5 and helico.score >= UPGRADE_COST):
+            helico.mxtank += 1
+            helico.score -= UPGRADE_COST
+        if (c == 9 and helico.score >= LIFE_COST):
+            helico.lives += 10
+            helico.score -= LIFE_COST
+        if (d == 2):
+            helico.lives -= 1
+            if helico.lives == 0:
+                helico.game_over()
+
+    def export_data (self):
+        return {"cells ": self.cells}
+    
+    def import_data(self, data):
+        self.cells = data["cells"] or [[0 for i in range(self.w)] for j in range (self.h)]
+
 
 
 
@@ -146,24 +168,24 @@ class Map:
 field = Map(int(input('Введите длину поля ')), int(input('Введите ширину поля ')))
 field.print_map()
 
-field.Generate_forests(int(input("Сколько % поля занимает лес? ")),100)
+field.generate_forests(int(input("Сколько % поля занимает лес? ")),100)
 field.print_map()
 
 print('Разместите на поле водоёмы')
 n = (int(input("Сколько на поле водоемов? (только > 0)")))
 if n == 1:
     print('Площадь водоёма ')
-    field.Generate_river(l = int(input()))
+    field.generate_river(l = int(input()))
 elif n == 2:
     print('Площадь водоёма ')
-    field.Generate_river(l = int(input()))
+    field.generate_river(l = int(input()))
     print('Площадь водоёма ')
-    field.Generate_river(l = int(input()))
+    field.generate_river(l = int(input()))
 else:
     for i in range(n):
         while i < n-1:
             print('Площадь водоёма ')
-            field.Generate_river(l = int(input()))
+            field.generate_river(l = int(input()))
             i += 1
         
 field.print_map()
@@ -176,5 +198,5 @@ field.print_map()
 
 print('введите координаты госпиталя Y и X')
 field.cells[int(input("Y ="))-1][int(input("X ="))-1]= 9
-field.print_map()'''
-
+field.print_map()
+'''
